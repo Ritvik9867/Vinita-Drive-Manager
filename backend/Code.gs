@@ -1,11 +1,10 @@
 // Google Apps Script backend for Driver Management System
 
-// Import configuration
-const CONFIG = getConfig();
-const SHEET_IDS = CONFIG.SHEETS;
-
 // Initialize cache for session management
 const cache = CacheService.getScriptCache();
+
+// Import configuration from config.gs
+const SHEET_IDS = CONFIG.SHEETS;
 
 // Initialize sheets
 function initializeSheets() {

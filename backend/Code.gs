@@ -639,18 +639,93 @@ function generateEarningsReport(driverId, timeFrame, startDate, endDate) {
              (!endDate || tripDate <= new Date(endDate));
     });
 
-    // Group and calculate metrics
-    return filteredTrips.map(trip => ({
-      date: trip[1],
-      driverName: trip[0],
-      trips: 1,
-      earnings: trip[4],
-      cashCollected: trip[7],
-      onlinePayments: trip[8]
-    }));
+    // Calculate earnings summary
+    const summary = {
+      totalTrips: filteredTrips.length,
+      totalEarnings: filteredTrips.reduce((sum, trip) => sum + trip[4], 0),
+      totalKM: filteredTrips.reduce((sum, trip) => sum + trip[3], 0),
+      cashCollected: filteredTrips.reduce((sum, trip) => sum + trip[7], 0),
+      onlinePayments: filteredTrips.reduce((sum, trip) => sum + trip[8], 0),
+      totalToll: filteredTrips.reduce((sum, trip) => sum + (trip[5] || 0), 0)
+    };
+
+    // Group trips by date for detailed breakdown
+    const tripsByDate = {};
+    filteredTrips.forEach(trip => {
+      const dateKey = new Date(trip[1]).toISOString().split('T')[0];
+      if (!tripsByDate[dateKey]) {
+        tripsByDate[dateKey] = [];
+      }
+      tripsByDate[dateKey].push({
+        driver: trip[0],
+        time: trip[2],
+        tripKM: trip[3],
+        amount: trip[4],
+        toll: trip[5],
+        paymentType: trip[6],
+        cashCollected: trip[7],
+        onlinePayment: trip[8],
+        status: trip[9]
+      });
+    });
+
+    return {
+      summary: summary,
+      details: tripsByDate
+    };
   } catch (error) {
-    console.error('Earnings report generation error:', error);
+    console.error('Error generating earnings report:', error);
     throw new Error('Failed to generate earnings report');
   }
 }
+
+// Helper function to generate expenses report
+function generateExpensesReport(driverId, timeFrame, startDate, endDate) {
+  try {
+    const expensesSheet = SpreadsheetApp.openById(SHEET_IDS.CNG_EXPENSES).getActiveSheet();
+    const expenses = expensesSheet.getDataRange().getValues();
+    const headers = expenses.shift(); // Remove header row
+
+    // Filter and process expenses based on parameters
+    const filteredExpenses = expenses.filter(expense => {
+      const expenseDate = new Date(expense[1]);
+      return (!driverId || expense[0] === driverId) &&
+             (!startDate || expenseDate >= new Date(startDate)) &&
+             (!endDate || expenseDate <= new Date(endDate));
+    });
+
+    // Calculate expenses summary
+    const summary = {
+      totalExpenses: filteredExpenses.length,
+      totalAmount: filteredExpenses.reduce((sum, expense) => sum + expense[2], 0),
+      pendingApproval: filteredExpenses.filter(expense => expense[5] === 'pending').length,
+      approved: filteredExpenses.filter(expense => expense[5] === 'approved').length
+    };
+
+    // Group expenses by date for detailed breakdown
+    const expensesByDate = {};
+    filteredExpenses.forEach(expense => {
+      const dateKey = new Date(expense[1]).toISOString().split('T')[0];
+      if (!expensesByDate[dateKey]) {
+        expensesByDate[dateKey] = [];
+      }
+      expensesByDate[dateKey].push({
+        driver: expense[0],
+        amount: expense[2],
+        paidBy: expense[3],
+        imageLink: expense[4],
+        status: expense[5],
+        adminApproval: expense[6],
+        approvalDate: expense[7]
+      });
+    });
+
+    return {
+      summary: summary,
+      details: expensesByDate
+    };
+  } catch (error) {
+    console.error('Error generating expenses report:', error);
+    throw new Error('Failed to generate expenses report');
+  }
 }

@@ -2,7 +2,7 @@
 
 export const config = {
   // Google Apps Script deployment URL
-  API_URL: 'https://script.google.com/macros/s/AKfycbwYuN0JrHvFs9_QO9UZaVr1rvHKqlNVT1qoLhJXb0Kj/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbwWKc46CFVFtbjRxksleXS1h7epheA1OrlXCfXqfxbGDTYvd9K59j4veYldl-TpEnkxBA/exec',
 
   // API Request Configuration
   API: {

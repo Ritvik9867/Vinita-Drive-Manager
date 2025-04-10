@@ -1,15 +1,18 @@
 // Google Apps Script Configuration
 
+// Get script properties
+const scriptProperties = PropertiesService.getScriptProperties();
+
 // Sheet IDs for the Driver Management System
 const CONFIG = {
   SHEETS: {
-    USERS: '1XdKT7_0NYaFrZT4VB9oD98KpzY2vN8jKzVfLmZ1tbk4',
-    TRIPS: '1wH2NzQJ3fY8mKpL6tXvR9q5sD7nGhY4JwxCkNjM8oP1',
-    CNG_EXPENSES: '1aB3cD4eF5gH6iJ7kL8mN9oP0qR1sT2uV3wX4yZ5',
-    OD_LOG: '1lM2nO3pQ4rS5tU6vW7xY8zA9bC0dE1fG2hI3jK4',
-    COMPLAINTS: '1gH2iJ3kL4mN5oP6qR7sT8uV9wX0yZ1aB2cD3eF4',
-    ADVANCE: '1pQ2rS3tU4vW5xY6zA7bC8dE9fG0hI1jK2lM3nO4',
-    LOGIN_LOGS: '1uV2wX3yZ4aB5cD6eF7gH8iJ9kL0mN1oP2qR3sT4'
+    USERS: scriptProperties.getProperty('USERS_SHEET_ID'),
+    TRIPS: scriptProperties.getProperty('TRIPS_SHEET_ID'),
+    CNG_EXPENSES: scriptProperties.getProperty('CNG_EXPENSES_SHEET_ID'),
+    OD_LOG: scriptProperties.getProperty('OD_LOG_SHEET_ID'),
+    COMPLAINTS: scriptProperties.getProperty('COMPLAINTS_SHEET_ID'),
+    ADVANCE: scriptProperties.getProperty('ADVANCE_SHEET_ID'),
+    LOGIN_LOGS: scriptProperties.getProperty('LOGIN_LOGS_SHEET_ID')
   },
 
   // API Response Settings
@@ -33,7 +36,7 @@ const CONFIG = {
   // Authentication settings
   AUTH: {
     SESSION_DURATION: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
-    TOKEN_SECRET: 'your-secret-key', // Change this in production
+    TOKEN_SECRET: scriptProperties.getProperty('TOKEN_SECRET'),
     SALT_ROUNDS: 10 // For password hashing
   },
   

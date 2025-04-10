@@ -142,7 +142,6 @@ function clearSession(token) {
     cache.remove(token);
   }
 }
-}
 
 // Helper function to send response
 function sendResponse(success, data, error = null) {
@@ -268,67 +267,70 @@ function register(data) {
     return sendResponse(false, null, 'An unexpected error occurred. Please try again later');
   }
 }
-}
 
 function login(data) {
-  const { email, password } = data;
-  
-  // Validate input
-  if (!email || !password) {
-    throw new Error('Missing credentials');
+  try {
+    const { email, password } = data;
+    
+    // Validate input
+    if (!email || !password) {
+      return sendResponse(false, null, 'Missing credentials');
+    }
+
+    const usersSheet = SpreadsheetApp.openById(SHEET_IDS.USERS).getActiveSheet();
+    const users = usersSheet.getDataRange().getValues();
+    
+    // Find user by email
+    const userRow = users.findIndex(user => user[4] === email);
+    if (userRow === -1) {
+      return sendResponse(false, null, 'Invalid credentials');
+    }
+
+    const user = users[userRow];
+    if (user[7] !== 'active') {
+      return sendResponse(false, null, 'Account is not active');
+    }
+
+    // Verify password
+    const [storedHashBase64, storedSalt] = user[1].split(':');
+    const storedHash = Utilities.base64Decode(storedHashBase64);
+    
+    if (!verifyPassword(password, storedHash, storedSalt)) {
+      return sendResponse(false, null, 'Invalid credentials');
+    }
+
+    // Update last login time
+    const now = new Date().toISOString();
+    usersSheet.getRange(userRow + 1, 7).setValue(now);
+
+    // Log login
+    const loginLogsSheet = SpreadsheetApp.openById(SHEET_IDS.LOGIN_LOGS).getActiveSheet();
+    loginLogsSheet.appendRow([
+      user[3],
+      now,
+      '',
+      '',
+      Session.getActiveUser().getUserLoginId(),
+      Session.getActiveUserLocale()
+    ]);
+
+    // Create session
+    const userData = {
+      id: userRow + 1,
+      name: user[3],
+      email: user[4],
+      role: user[2]
+    };
+    const sessionToken = createSession(userData);
+
+    return sendResponse(true, {
+      user: userData,
+      token: sessionToken
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return sendResponse(false, null, 'An unexpected error occurred during login');
   }
-
-  const usersSheet = SpreadsheetApp.openById(SHEET_IDS.USERS).getActiveSheet();
-  const users = usersSheet.getDataRange().getValues();
-  
-  // Find user by email
-  const userRow = users.findIndex(user => user[4] === email);
-  if (userRow === -1) {
-    throw new Error('Invalid credentials');
-  }
-
-  const user = users[userRow];
-  if (user[7] !== 'active') {
-    throw new Error('Account is not active');
-  }
-
-  // Verify password
-  const [storedHashBase64, storedSalt] = user[1].split(':');
-  const storedHash = Utilities.base64Decode(storedHashBase64);
-  
-  if (!verifyPassword(password, storedHash, storedSalt)) {
-    throw new Error('Invalid credentials');
-  }
-
-  // Update last login time
-  const now = new Date().toISOString();
-  usersSheet.getRange(userRow + 1, 7).setValue(now);
-
-  // Log login
-  const loginLogsSheet = SpreadsheetApp.openById(SHEET_IDS.LOGIN_LOGS).getActiveSheet();
-  loginLogsSheet.appendRow([
-    user[3],
-    now,
-    '',
-    '',
-    Session.getActiveUser().getUserLoginId(),
-    Session.getActiveUserLocale()
-  ]);
-
-  // Create session
-  const userData = {
-    id: userRow + 1,
-    name: user[3],
-    email: user[4],
-    role: user[2]
-  };
-  const sessionToken = createSession(userData);
-
-  return sendResponse(true, {
-    user: userData,
-    token: sessionToken
-  });
-}
 }
 
 // Trip management functions
@@ -595,42 +597,60 @@ function getODLog(data) {
 
 // Report generation function
 function generateReport(data) {
-  const { reportType, timeFrame, driverId, startDate, endDate } = data;
-  let reportData = [];
+  try {
+    const { reportType, timeFrame, driverId, startDate, endDate } = data;
+    
+    if (!reportType) {
+      return sendResponse(false, null, 'Report type is required');
+    }
 
-  switch (reportType) {
-    case 'earnings':
-      reportData = generateEarningsReport(driverId, timeFrame, startDate, endDate);
-      break;
-    case 'expenses':
-      reportData = generateExpensesReport(driverId, timeFrame, startDate, endDate);
-      break;
-    // Add other report types
+    let reportData = [];
+
+    switch (reportType) {
+      case 'earnings':
+        reportData = generateEarningsReport(driverId, timeFrame, startDate, endDate);
+        break;
+      case 'expenses':
+        reportData = generateExpensesReport(driverId, timeFrame, startDate, endDate);
+        break;
+      default:
+        return sendResponse(false, null, 'Invalid report type');
+    }
+
+    return sendResponse(true, { reportData });
+  } catch (error) {
+    console.error('Report generation error:', error);
+    return sendResponse(false, null, 'Failed to generate report');
   }
-
-  return sendResponse(true, { reportData });
 }
 
 // Helper function to generate earnings report
 function generateEarningsReport(driverId, timeFrame, startDate, endDate) {
-  const tripsSheet = SpreadsheetApp.openById(TRIPS_SHEET_ID).getActiveSheet();
-  const trips = tripsSheet.getDataRange().getValues();
-  
-  // Filter and process trips based on parameters
-  const filteredTrips = trips.filter(trip => {
-    const tripDate = new Date(trip[1]);
-    return (!driverId || trip[0] === driverId) &&
-           (!startDate || tripDate >= new Date(startDate)) &&
-           (!endDate || tripDate <= new Date(endDate));
-  });
+  try {
+    const tripsSheet = SpreadsheetApp.openById(SHEET_IDS.TRIPS).getActiveSheet();
+    const trips = tripsSheet.getDataRange().getValues();
+    const headers = trips.shift(); // Remove header row
+    
+    // Filter and process trips based on parameters
+    const filteredTrips = trips.filter(trip => {
+      const tripDate = new Date(trip[1]);
+      return (!driverId || trip[0] === driverId) &&
+             (!startDate || tripDate >= new Date(startDate)) &&
+             (!endDate || tripDate <= new Date(endDate));
+    });
 
-  // Group and calculate metrics
-  return filteredTrips.map(trip => ({
-    date: trip[1],
-    driverName: trip[0],
-    trips: 1,
-    earnings: trip[4],
-    cashCollected: trip[7],
-    onlinePayments: trip[8]
-  }));
+    // Group and calculate metrics
+    return filteredTrips.map(trip => ({
+      date: trip[1],
+      driverName: trip[0],
+      trips: 1,
+      earnings: trip[4],
+      cashCollected: trip[7],
+      onlinePayments: trip[8]
+    }));
+  } catch (error) {
+    console.error('Earnings report generation error:', error);
+    throw new Error('Failed to generate earnings report');
+  }
+}
 }

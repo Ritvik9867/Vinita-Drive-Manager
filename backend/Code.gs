@@ -37,11 +37,13 @@ function initializeSheets() {
 function doPost(e) {
   // Set CORS headers for all responses
   const headers = {
-    'Access-Control-Allow-Origin': CONFIG.API.CORS.ALLOWED_ORIGINS[0],
-    'Access-Control-Allow-Methods': CONFIG.API.CORS.ALLOWED_METHODS.join(', '),
-    'Access-Control-Allow-Headers': CONFIG.API.CORS.ALLOWED_HEADERS.join(', '),
-    'Access-Control-Max-Age': CONFIG.API.CORS.MAX_AGE,
-    'Content-Type': 'application/json'
+    'Access-Control-Allow-Origin': e.origin || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept, X-Requested-With, Origin, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Max-Age': '3600',
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate'
   };
 
   // Handle preflight OPTIONS request
@@ -52,9 +54,13 @@ function doPost(e) {
   }
 
   try {
-    // Handle preflight OPTIONS request
+    // Handle preflight OPTIONS request with enhanced error handling
     if (e.method === 'OPTIONS') {
-      return ContentService.createTextOutput(JSON.stringify({status: 'ok'}))
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'ok',
+        serverTime: new Date().toISOString(),
+        cors: 'enabled'
+      }))
         .setMimeType(ContentService.MimeType.JSON)
         .setHeaders(headers);
     }
@@ -189,9 +195,22 @@ function register(data) {
   try {
     const { email, password, name, role = 'driver' } = data;
     
-    // Validate input
+    // Enhanced input validation with detailed error messages
     if (!email || !password || !name) {
-      return sendResponse(false, null, 'Missing required fields: email, password, and name are mandatory');
+      const missingFields = [];
+      if (!email) missingFields.push('email');
+      if (!password) missingFields.push('password');
+      if (!name) missingFields.push('name');
+      return sendResponse(false, null, `Missing required fields: ${missingFields.join(', ')}`);
+    }
+
+    // Check if user already exists
+    const usersSheet = SpreadsheetApp.openById(SHEET_IDS.USERS).getActiveSheet();
+    const users = usersSheet.getDataRange().getValues();
+    const existingUser = users.find(user => user[4] === email); // Email is in column E (index 4)
+    
+    if (existingUser) {
+      return sendResponse(false, null, 'User with this email already exists');
     }
 
     // Validate email format

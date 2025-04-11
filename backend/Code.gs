@@ -34,7 +34,15 @@ function initializeSheets() {
 }
 
 // Web app endpoint
+function doGet(e) {
+  return handleCORS(e);
+}
+
 function doPost(e) {
+  return handleCORS(e);
+}
+
+function handleCORS(e) {
   // Set CORS headers for all responses
   const headers = {
     'Access-Control-Allow-Origin': e.origin || '*',
@@ -48,7 +56,11 @@ function doPost(e) {
 
   // Handle preflight OPTIONS request
   if (e.method === 'OPTIONS') {
-    return ContentService.createTextOutput(JSON.stringify({status: 'ok'}))
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'ok',
+      serverTime: new Date().toISOString(),
+      cors: 'enabled'
+    }))
       .setMimeType(ContentService.MimeType.JSON)
       .setHeaders(headers);
   }
@@ -204,13 +216,19 @@ function register(data) {
       return sendResponse(false, null, `Missing required fields: ${missingFields.join(', ')}`);
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return sendResponse(false, null, 'Invalid email format');
+    }
+
     // Check if user already exists
     const usersSheet = SpreadsheetApp.openById(SHEET_IDS.USERS).getActiveSheet();
     const users = usersSheet.getDataRange().getValues();
     const existingUser = users.find(user => user[4] === email); // Email is in column E (index 4)
     
     if (existingUser) {
-      return sendResponse(false, null, 'User with this email already exists');
+      return sendResponse(false, null, 'Email already registered');
     }
 
     // Validate email format
@@ -266,6 +284,8 @@ function register(data) {
 
     // Add new user with retry logic
     retryCount = 0;
+    
+    try {
     while (retryCount < maxRetries) {
       try {
         usersSheet.appendRow([

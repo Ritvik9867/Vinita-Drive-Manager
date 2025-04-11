@@ -32,30 +32,23 @@ To set these properties:
 // Get script properties
 const scriptProperties = PropertiesService.getScriptProperties();
 
-// Set default values for Sheet IDs and TOKEN_SECRET if not already set
-if (!scriptProperties.getProperty('USERS_SHEET_ID')) {
-  scriptProperties.setProperty('USERS_SHEET_ID', '1xKj2mPzN8iQ3vYtR5wL7aE9oD4fH6gU8pB2cM1n');
-}
-if (!scriptProperties.getProperty('TRIPS_SHEET_ID')) {
-  scriptProperties.setProperty('TRIPS_SHEET_ID', '2yVk4nQzP9jR7xWt6bF8mH3sL5gC1hD0qA4eN2p');
-}
-if (!scriptProperties.getProperty('CNG_EXPENSES_SHEET_ID')) {
-  scriptProperties.setProperty('CNG_EXPENSES_SHEET_ID', '3zXm5rSzQ1kT8yUv7cG9pH4tM6jD2iE0nB5fP3q');
-}
-if (!scriptProperties.getProperty('OD_LOG_SHEET_ID')) {
-  scriptProperties.setProperty('OD_LOG_SHEET_ID', '4wYn6tTwR2mU9zVx8dH1qJ5uN7kE3jF0pC6gQ4r');
-}
-if (!scriptProperties.getProperty('COMPLAINTS_SHEET_ID')) {
-  scriptProperties.setProperty('COMPLAINTS_SHEET_ID', '5vZp7uUxS3nV1wWy9eJ2rK6vP8mF4kG0qD7hR5s');
-}
-if (!scriptProperties.getProperty('ADVANCE_SHEET_ID')) {
-  scriptProperties.setProperty('ADVANCE_SHEET_ID', '6xAq8vVyT4pW2xXz1fK3sL7wQ9nG5mH0rE8iS6t');
-}
-if (!scriptProperties.getProperty('LOGIN_LOGS_SHEET_ID')) {
-  scriptProperties.setProperty('LOGIN_LOGS_SHEET_ID', '7yBr9wWzU5qX3yYw2gL4tM8xR1pH6nJ0sF9jT7u');
-}
-if (!scriptProperties.getProperty('TOKEN_SECRET')) {
-  scriptProperties.setProperty('TOKEN_SECRET', '550e8400-e29b-41d4-a716-446655440000');
+// Validate and set required script properties
+const requiredProperties = [
+  'USERS_SHEET_ID',
+  'TRIPS_SHEET_ID',
+  'CNG_EXPENSES_SHEET_ID',
+  'OD_LOG_SHEET_ID',
+  'COMPLAINTS_SHEET_ID',
+  'ADVANCE_SHEET_ID',
+  'LOGIN_LOGS_SHEET_ID',
+  'TOKEN_SECRET'
+];
+
+// Check for missing required properties
+const missingProperties = requiredProperties.filter(prop => !scriptProperties.getProperty(prop));
+
+if (missingProperties.length > 0) {
+  throw new Error(`Missing required script properties: ${missingProperties.join(', ')}. Please set these properties in the Script Editor.`);
 }
 
 // Sheet IDs for the Driver Management System
@@ -82,7 +75,8 @@ const CONFIG = {
     CORS: {
       ALLOWED_ORIGINS: ['*'],
       ALLOWED_METHODS: ['GET', 'POST', 'OPTIONS'],
-      ALLOWED_HEADERS: ['Content-Type', 'Accept', 'X-Requested-With', 'Origin'],
+      ALLOWED_HEADERS: ['Content-Type', 'Accept', 'X-Requested-With', 'Origin', 'Authorization'],
+      ALLOW_CREDENTIALS: true,
       MAX_AGE: 3600
     }
   },

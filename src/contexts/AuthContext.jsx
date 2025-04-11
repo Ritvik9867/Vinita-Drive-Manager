@@ -128,11 +128,19 @@ export const AuthProvider = ({ children }) => {
     let retryCount = 0;
     const maxRetries = config.API.RETRY_COUNT;
 
-    // Validate required fields
+    // Validate required fields and email format
     if (!userData.email || !userData.password || !userData.name) {
       return {
         success: false,
         error: 'Please fill in all required fields'
+      };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userData.email)) {
+      return {
+        success: false,
+        error: 'Please enter a valid email address'
       };
     }
 
@@ -147,19 +155,18 @@ export const AuthProvider = ({ children }) => {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            'Origin': window.location.origin,
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+            'Origin': window.location.origin
           },
           body: JSON.stringify({
             action: 'register',
             timestamp: new Date().toISOString(),
-            ...userData
+            ...userData,
+            role: userData.role || 'driver' // Default role if not specified
           }),
+          credentials: 'omit',
           signal: controller.signal,
           mode: 'cors',
-          cache: 'no-store',
-          redirect: 'follow'
+          credentials: 'omit'
         });
 
         clearTimeout(timeoutId);
@@ -179,8 +186,18 @@ export const AuthProvider = ({ children }) => {
           throw new Error(errorData.error || `Registration failed (${status}). Please try again later.`);
         }
 
-        const data = await response.json();
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          throw new Error('Invalid response from server');
+        }
+
         if (data.success) {
+          // Store session token if provided
+          if (data.sessionToken) {
+            localStorage.setItem('sessionToken', data.sessionToken);
+          }
           return { success: true };
         } else {
           throw new Error(data.error || 'Registration failed');

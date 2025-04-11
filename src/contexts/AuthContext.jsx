@@ -106,8 +106,13 @@ export const AuthProvider = ({ children }) => {
       if (error.name === 'AbortError') {
         return { success: false, error: 'Login request timed out. Please try again.' }
       }
+      if (retryCount < maxRetries) {
+        retryCount++;
+        continue;
+      }
       return { success: false, error: error.message || 'Login failed. Please try again.' }
     }
+  }
   }
 
   const register = async (userData) => {

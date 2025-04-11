@@ -24,10 +24,18 @@ export const AuthProvider = ({ children }) => {
       try {
         const response = await fetch(config.API_URL, {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Origin': window.location.origin
+          },
           body: JSON.stringify({
             action: 'checkAuth',
             sessionToken: localStorage.getItem('sessionToken')
-          })
+          }),
+          mode: 'cors',
+          credentials: 'omit'
         })
         const data = await response.json()
         
@@ -70,7 +78,7 @@ export const AuthProvider = ({ children }) => {
           }),
           signal: controller.signal,
           mode: 'cors',
-          credentials: 'include'
+          credentials: 'omit'
         });
 
         clearTimeout(timeoutId);

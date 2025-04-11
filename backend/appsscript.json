@@ -1,0 +1,27 @@
+{
+  "timeZone": "Asia/Kolkata",
+  "dependencies": {
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "executionApi": {
+    "access": "ANYONE"
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/script.scriptapp"
+  ],
+  "files": [
+    {
+      "name": "config",
+      "type": "server_js",
+      "source": "config.gs"
+    },
+    {
+      "name": "Code",
+      "type": "server_js",
+      "source": "Code.gs"
+    }
+  ]
+}

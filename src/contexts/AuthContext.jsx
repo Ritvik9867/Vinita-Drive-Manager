@@ -75,44 +75,45 @@ export const AuthProvider = ({ children }) => {
 
         clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const status = response.status;
-        if (status >= 500) {
-          throw new Error(`Server error (${status}). Please try again later.`);
+        if (!response.ok) {
+          const status = response.status;
+          if (status >= 500) {
+            throw new Error(`Server error (${status}). Please try again later.`);
+          }
+          if (status === 429) {
+            throw new Error('Too many requests. Please wait a moment before trying again.');
+          }
+          if (status === 0 || status === 404) {
+            throw new Error('Unable to connect to server. Please check your internet connection.');
+          }
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Login failed (${status}). Please try again later.`);
         }
-        if (status === 429) {
-          throw new Error('Too many requests. Please wait a moment before trying again.');
-        }
-        if (status === 0 || status === 404) {
-          throw new Error('Unable to connect to server. Please check your internet connection.');
-        }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Login failed (${status}). Please try again later.`);
-      }
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (data.success) {
-        setUser(data.user)
-        setIsAuthenticated(true)
-        localStorage.setItem('sessionToken', data.sessionToken)
-        navigate(data.user.role === 'admin' ? '/admin' : '/driver')
-        return { success: true }
-      } else {
-        return { success: false, error: data.error || 'Invalid credentials' }
+        if (data.success) {
+          setUser(data.user)
+          setIsAuthenticated(true)
+          localStorage.setItem('sessionToken', data.sessionToken)
+          navigate(data.user.role === 'admin' ? '/admin' : '/driver')
+          return { success: true }
+        } else {
+          return { success: false, error: data.error || 'Invalid credentials' }
+        }
+      } catch (error) {
+        console.error('Login failed:', error)
+        if (error.name === 'AbortError') {
+          return { success: false, error: 'Login request timed out. Please try again.' }
+        }
+        if (retryCount < maxRetries) {
+          retryCount++;
+          continue;
+        }
+        return { success: false, error: error.message || 'Login failed. Please try again.' }
       }
-    } catch (error) {
-      console.error('Login failed:', error)
-      if (error.name === 'AbortError') {
-        return { success: false, error: 'Login request timed out. Please try again.' }
-      }
-      if (retryCount < maxRetries) {
-        retryCount++;
-        continue;
-      }
-      return { success: false, error: error.message || 'Login failed. Please try again.' }
     }
-  }
+    return { success: false, error: 'Maximum retry attempts reached' }
   }
 
   const register = async (userData) => {
@@ -164,7 +165,6 @@ export const AuthProvider = ({ children }) => {
         } else {
           throw new Error(data.error || 'Registration failed');
         }
-
       } catch (error) {
         console.error(`Registration attempt ${retryCount + 1} failed:`, error);
         if (retryCount < maxRetries && 
@@ -207,7 +207,6 @@ export const AuthProvider = ({ children }) => {
       navigate('/login')
     }
   }
-}
 
   const value = {
     user,

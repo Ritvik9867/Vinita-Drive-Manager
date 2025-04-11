@@ -120,6 +120,14 @@ export const AuthProvider = ({ children }) => {
     let retryCount = 0;
     const maxRetries = config.API.RETRY_COUNT;
 
+    // Validate required fields
+    if (!userData.email || !userData.password || !userData.name) {
+      return {
+        success: false,
+        error: 'Please fill in all required fields'
+      };
+    }
+
     while (retryCount <= maxRetries) {
       try {
         const controller = new AbortController();
@@ -131,15 +139,19 @@ export const AuthProvider = ({ children }) => {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            'Origin': window.location.origin
+            'Origin': window.location.origin,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           },
           body: JSON.stringify({
             action: 'register',
+            timestamp: new Date().toISOString(),
             ...userData
           }),
           signal: controller.signal,
           mode: 'cors',
-          credentials: 'include'
+          cache: 'no-store',
+          redirect: 'follow'
         });
 
         clearTimeout(timeoutId);

@@ -78,6 +78,12 @@ const CONFIG = {
     RATE_LIMIT: {
       MAX_REQUESTS: 100,
       WINDOW_MS: 60000
+    },
+    CORS: {
+      ALLOWED_ORIGINS: ['*'],
+      ALLOWED_METHODS: ['GET', 'POST', 'OPTIONS'],
+      ALLOWED_HEADERS: ['Content-Type', 'Accept', 'X-Requested-With', 'Origin'],
+      MAX_AGE: 3600
     }
   },
   

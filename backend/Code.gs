@@ -37,9 +37,10 @@ function initializeSheets() {
 function doPost(e) {
   // Set CORS headers for all responses
   const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Origin': CONFIG.API.CORS.ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Methods': CONFIG.API.CORS.ALLOWED_METHODS.join(', '),
+    'Access-Control-Allow-Headers': CONFIG.API.CORS.ALLOWED_HEADERS.join(', '),
+    'Access-Control-Max-Age': CONFIG.API.CORS.MAX_AGE,
     'Content-Type': 'application/json'
   };
 
@@ -51,9 +52,26 @@ function doPost(e) {
   }
 
   try {
+    // Handle preflight OPTIONS request
+    if (e.method === 'OPTIONS') {
+      return ContentService.createTextOutput(JSON.stringify({status: 'ok'}))
+        .setMimeType(ContentService.MimeType.JSON)
+        .setHeaders(headers);
+    }
+
+    // Validate request content
+    if (!e.postData || !e.postData.contents) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Invalid request: missing request body'
+      }))
+      .setMimeType(ContentService.MimeType.JSON)
+      .setHeaders(headers);
+    }
+
     const data = JSON.parse(e.postData.contents);
     const action = data.action;
-    const token = e.parameter.token;
+    const token = data.sessionToken || e.parameter.token;
 
     // Check authentication for protected endpoints
     if (!['login', 'register'].includes(action)) {

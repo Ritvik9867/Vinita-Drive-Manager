@@ -48,26 +48,32 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   const login = async (credentials) => {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), config.API.TIMEOUT);
+    let retryCount = 0;
+    const maxRetries = config.API.RETRY_COUNT;
 
-      const response = await fetch(config.API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          'Origin': window.location.origin
-        },
-        body: JSON.stringify({
-          action: 'login',
-          ...credentials
-        }),
-        signal: controller.signal
-      })
+    while (retryCount <= maxRetries) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), config.API.TIMEOUT);
 
-      clearTimeout(timeoutId);
+        const response = await fetch(config.API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Origin': window.location.origin
+          },
+          body: JSON.stringify({
+            action: 'login',
+            ...credentials
+          }),
+          signal: controller.signal,
+          mode: 'cors',
+          credentials: 'include'
+        });
+
+        clearTimeout(timeoutId);
 
       if (!response.ok) {
         const status = response.status;
@@ -113,19 +119,33 @@ export const AuthProvider = ({ children }) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), config.API.TIMEOUT);
 
+        // Check internet connectivity
+        if (!navigator.onLine) {
+          throw new Error('No internet connection. Please check your network and try again.');
+        }
+
         const response = await fetch(config.API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            'Origin': window.location.origin
+            'Origin': window.location.origin,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            'Access-Control-Allow-Origin': '*'
           },
           body: JSON.stringify({
             action: 'register',
-            ...userData
+            ...userData,
+            timestamp: Date.now(), // Add timestamp to prevent caching
+            client_id: Math.random().toString(36).substring(7) // Add unique client ID
           }),
-          signal: controller.signal
+          signal: controller.signal,
+          mode: 'cors',
+          credentials: 'omit',
+          cache: 'no-store'
         });
 
         clearTimeout(timeoutId);

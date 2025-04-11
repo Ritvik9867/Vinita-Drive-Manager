@@ -11,7 +11,7 @@ import theme from './theme/theme'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter basename="/driver-management-systems">
+    <BrowserRouter basename="/Vinita-Drive-Manager">
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>
